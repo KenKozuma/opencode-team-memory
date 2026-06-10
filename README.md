@@ -24,6 +24,39 @@ Override with `OPENCODE_TEAM_MEMORY_DIR` env var.
 
 Compaction hook injects compact summaries automatically — long sessions keep context.
 
+## Enable / Disable
+
+Toggle without editing config files. Restart `opencode` after switching.
+
+**Disable**:
+```bash
+touch .omo/.team-memory-disabled
+```
+
+**Enable**:
+```bash
+rm .omo/.team-memory-disabled
+```
+
+Or register as custom commands in `opencode.json`:
+
+```jsonc
+{
+  "command": {
+    "memory-on": {
+      "description": "Enable team memory plugin",
+      "command": "rm -f .omo/.team-memory-disabled && echo 'Team memory enabled (restart opencode)'"
+    },
+    "memory-off": {
+      "description": "Disable team memory plugin",
+      "command": "touch .omo/.team-memory-disabled && echo 'Team memory disabled (restart opencode)'"
+    }
+  }
+}
+```
+
+Then type `/memory-off` or `/memory-on` in the TUI.
+
 ## Install
 
 ```bash

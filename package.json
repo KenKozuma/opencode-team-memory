@@ -29,7 +29,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/YOUR_USER/opencode-team-memory"
+    "url": "https://github.com/KenKozuma/opencode-team-memory"
   },
   "peerDependencies": {
     "@opencode-ai/plugin": "*"

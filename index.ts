@@ -1,5 +1,5 @@
 import { type Plugin, tool } from "@opencode-ai/plugin"
-import { readFile, writeFile, mkdir } from "node:fs/promises"
+import { readFile, writeFile, mkdir, access } from "node:fs/promises"
 import { join } from "node:path"
 import { ALL_ROLES, EMPTY_MEMORY, type MemoryEntry, type Role, type SaveInput } from "./types"
 import { merge, format, formatCompact, formatSaveResult } from "./memory"
@@ -8,11 +8,22 @@ function getMemoryBase(directory: string): string {
   return process.env.OPENCODE_TEAM_MEMORY_DIR || join(directory, ".omo", "team-memory")
 }
 
+function getDisabledMarker(directory: string): string {
+  return join(directory, ".omo", ".team-memory-disabled")
+}
+
 function isENOENT(err: unknown): err is NodeJS.ErrnoException {
   return err instanceof Error && "code" in err && (err as NodeJS.ErrnoException).code === "ENOENT"
 }
 
 export const TeamMemoryPlugin: Plugin = async ({ directory }) => {
+  const marker = getDisabledMarker(directory)
+  try {
+    await access(marker)
+    return {}
+  } catch {
+    // marker file does not exist — plugin is enabled
+  }
   const base = getMemoryBase(directory)
 
   async function load(role: Role): Promise<MemoryEntry | null> {
