@@ -131,6 +131,12 @@ Designer should read Director's memory:
 role_memory_load(role="director")  // scope, goals, explicit exclusions
 ```
 
+## Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `OPENCODE_TEAM_MEMORY_DIR` | `<project>/.omo/team-memory` | Storage directory. **Warning**: If set globally, multiple projects share the same memory. Use per-project values or keep the default. |
+
 ## Stored data structure
 
 ```typescript

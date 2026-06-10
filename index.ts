@@ -8,6 +8,10 @@ function getMemoryBase(directory: string): string {
   return process.env.OPENCODE_TEAM_MEMORY_DIR || join(directory, ".omo", "team-memory")
 }
 
+function isENOENT(err: unknown): err is NodeJS.ErrnoException {
+  return err instanceof Error && "code" in err && (err as NodeJS.ErrnoException).code === "ENOENT"
+}
+
 export const TeamMemoryPlugin: Plugin = async ({ directory }) => {
   const base = getMemoryBase(directory)
 
@@ -16,7 +20,7 @@ export const TeamMemoryPlugin: Plugin = async ({ directory }) => {
       const text = await readFile(join(base, role, "context.json"), "utf-8")
       return JSON.parse(text) as MemoryEntry
     } catch (err: unknown) {
-      if (err && typeof err === "object" && "code" in err && (err as { code: string }).code === "ENOENT") {
+      if (isENOENT(err)) {
         return null
       }
       throw err

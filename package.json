@@ -7,7 +7,10 @@
   "files": [
     "index.ts",
     "types.ts",
-    "memory.ts"
+    "memory.ts",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "test": "bun test",

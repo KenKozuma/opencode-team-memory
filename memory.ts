@@ -15,7 +15,7 @@ export function merge(existing: MemoryEntry | null, input: SaveInput, project: s
       confirmed_scope: input.confirmed_scope || [],
       excluded_scope: input.excluded_scope || [],
       active_files: input.active_files || [],
-      handoff_to: input.handoff_to || "",
+      handoff_to: input.handoff_to !== undefined ? input.handoff_to : "",
       raw_entries: input.raw ? [input.raw] : [],
     }
   }

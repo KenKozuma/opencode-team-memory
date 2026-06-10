@@ -1,6 +1,6 @@
 import { describe, test, expect } from "bun:test"
 import { merge, format, formatCompact, formatSaveResult } from "./memory"
-import { EMPTY_MEMORY, type MemoryEntry, type Role } from "./types"
+import { EMPTY_MEMORY, type MemoryEntry } from "./types"
 
 const PROJECT = "/fake/project"
 
@@ -179,5 +179,12 @@ describe("formatSaveResult", () => {
     const out = formatSaveResult(entry)
     expect(out).toContain("engineer")
     expect(out).toContain("→ director")
+  })
+
+  test("formats save confirmation without handoff", () => {
+    const entry = makeEntry({ handoff_to: "" })
+    const out = formatSaveResult(entry)
+    expect(out).toContain("engineer")
+    expect(out).not.toContain("→")
   })
 })
