@@ -1,0 +1,99 @@
+import { type MemoryEntry, type SaveInput, CURRENT_VERSION, EMPTY_MEMORY, type Role } from "./types"
+
+const MAX_KEEP = 50
+const RAW_LOAD_LIMIT = 5
+
+export function merge(existing: MemoryEntry | null, input: SaveInput, project: string): MemoryEntry {
+  const now = new Date().toISOString()
+
+  if (!existing) {
+    return {
+      ...EMPTY_MEMORY(input.role, project),
+      last_updated: now,
+      previous_decisions: (input.previous_decisions || []).slice(-MAX_KEEP),
+      ng_history: (input.ng_history || []).slice(-MAX_KEEP),
+      confirmed_scope: input.confirmed_scope || [],
+      excluded_scope: input.excluded_scope || [],
+      active_files: input.active_files || [],
+      handoff_to: input.handoff_to || "",
+      raw_entries: input.raw ? [input.raw] : [],
+    }
+  }
+
+  const base = migrate(existing)
+
+  const append = (a: string[], b?: string[]): string[] =>
+    [...a, ...(b || [])].slice(-MAX_KEEP)
+
+  return {
+    ...base,
+    last_updated: now,
+    previous_decisions: append(base.previous_decisions, input.previous_decisions),
+    ng_history: append(base.ng_history, input.ng_history),
+    confirmed_scope: input.confirmed_scope || base.confirmed_scope,
+    excluded_scope: input.excluded_scope || base.excluded_scope,
+    active_files: input.active_files || base.active_files,
+    handoff_to: input.handoff_to !== undefined ? input.handoff_to : base.handoff_to,
+    raw_entries: input.raw
+      ? append(base.raw_entries, [input.raw])
+      : base.raw_entries,
+  }
+}
+
+function migrate(entry: MemoryEntry): MemoryEntry {
+  if (entry.version >= CURRENT_VERSION) return entry
+  return { ...entry, version: CURRENT_VERSION }
+}
+
+export function format(entry: MemoryEntry | null, role: Role): string {
+  if (!entry) return `No saved context for role '${role}'. This is a fresh start.`
+
+  const raw = entry.raw_entries.slice(-RAW_LOAD_LIMIT)
+
+  return [
+    `=== PERSISTENT CONTEXT: ${role} ===`,
+    `Project: ${entry.project}`,
+    `Last updated: ${entry.last_updated}`,
+    ``,
+    `## Previous Decisions (${entry.previous_decisions.length} total, showing last ${Math.min(entry.previous_decisions.length, RAW_LOAD_LIMIT)})`,
+    ...entry.previous_decisions.slice(-RAW_LOAD_LIMIT).map((d, i) => `${i + 1}. ${d}`),
+    ``,
+    `## NG History (${entry.ng_history.length} total, showing last ${Math.min(entry.ng_history.length, RAW_LOAD_LIMIT)})`,
+    ...entry.ng_history.slice(-RAW_LOAD_LIMIT).map((n, i) => `${i + 1}. ${n}`),
+    ``,
+    `## Confirmed Scope`,
+    ...entry.confirmed_scope.map((s) => `- ${s}`),
+    ``,
+    `## Excluded Scope (DO NOT TOUCH)`,
+    ...entry.excluded_scope.map((s) => `- ${s}`),
+    ``,
+    `## Active Files`,
+    ...entry.active_files.map((f) => `- ${f}`),
+    ``,
+    entry.handoff_to ? `## Handoff Target → ${entry.handoff_to}` : "",
+    ``,
+    `## Raw Context Entries (${entry.raw_entries.length} total, showing last ${raw.length})`,
+    ...raw.map((r, i) => `--- Entry ${entry.raw_entries.length - raw.length + i + 1} ---\n${r}`),
+  ].join("\n")
+}
+
+export function formatCompact(entry: MemoryEntry | null): string {
+  if (!entry) return "(no memory)"
+
+  return [
+    `## Team Memory: ${entry.role}`,
+    `Decisions: ${entry.previous_decisions.slice(-3).join("; ") || "none"}`,
+    `Recent NG: ${entry.ng_history.slice(-2).join("; ") || "none"}`,
+    `Scope: confirmed=[${entry.confirmed_scope.join(", ")}] excluded=[${entry.excluded_scope.join(", ")}]`,
+    `Files: ${entry.active_files.join(", ") || "none"}`,
+  ].join("\n")
+}
+
+export function formatSaveResult(entry: MemoryEntry): string {
+  return [
+    `✓ Saved context for '${entry.role}'`,
+    `  Decisions: ${entry.previous_decisions.length} | NG: ${entry.ng_history.length}`,
+    `  Scope: ${entry.confirmed_scope.length} confirmed / ${entry.excluded_scope.length} excluded`,
+    entry.handoff_to ? `  Next: → ${entry.handoff_to}` : "",
+  ].join("\n")
+}

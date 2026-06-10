@@ -1,0 +1,34 @@
+{
+  "name": "opencode-team-memory",
+  "version": "1.0.0",
+  "description": "Persistent role-based memory for OpenCode/OmO Team Mode — survives across sessions and runs",
+  "type": "module",
+  "main": "index.ts",
+  "files": [
+    "index.ts",
+    "types.ts",
+    "memory.ts"
+  ],
+  "scripts": {
+    "test": "bun test",
+    "prepublishOnly": "bun test"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "oh-my-opencode",
+    "oh-my-openagent",
+    "team-mode",
+    "multi-agent",
+    "memory",
+    "persistence"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_USER/opencode-team-memory"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": "*"
+  }
+}
