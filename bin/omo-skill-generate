@@ -87,13 +87,17 @@ refs = json.load(open('$REFS_FILE'))
 for name, entry in sorted(refs.items(), key=lambda x: -x[1]['count']):
     if entry['count'] >= 3:
         print(f'{name}\t{entry[\"count\"]}\t{entry[\"solution\"]}')
-" 2>/dev/null | while IFS='	' read -r name count solution; do
+" 2>/dev/null > /tmp/omo-patterns-$$.txt
+
+while IFS='	' read -r name count solution; do
   if [ -n "$PATTERN" ] && [ "$name" != "$PATTERN" ]; then
     continue
   fi
   generate_one "$name" "$count" "$solution"
   generated=$((generated + 1))
-done
+done < /tmp/omo-patterns-$$.txt
+
+rm -f /tmp/omo-patterns-$$.txt
 
 if [ "$generated" -eq 0 ]; then
   echo "  (no patterns reached threshold of 3)" >&2

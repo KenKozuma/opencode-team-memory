@@ -43,17 +43,6 @@ export interface SaveInput {
   raw?: string
 }
 
-export interface ContinueState {
-  role: Role
-  handoff_to: string
-  last_action: string
-  ng_count: number
-  confirmed_scope: string[]
-  excluded_scope: string[]
-  decisions_summary: string
-  ng_summary: string
-}
-
 export interface ReferenceEntry {
   count: number
   solution: string

@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.4.4
+
+- `omo-skill-install` now also copies Director agent
+- Fix subshell count false-negative in `omo-skill-generate`
+- Add `opencode` not-in-PATH error handling in `omo-resume`
+- Remove unused `ContinueState` type
+
+## 1.4.3
+
+- Fix skill directory names to match frontmatter names
+
+## 1.4.2
+
+- Include `.opencode/` skills in npm tarball
+
 ## 1.4.1
 
 - Add `omo-skill-install` — copy role skills to project

@@ -1,38 +1,49 @@
 #!/bin/sh
-# omo-skill-install — team-memory role skills をプロジェクトにコピー
-# Usage: omo-skill-install [--global]
+# omo-install — team-memory skills + Director agent をプロジェクトにコピー
+# Usage: omo-install [--global]
 
 set -eu
 
 GLOBAL="${1:-}"
-SRC="$(npm root -g)/opencode-team-memory/.opencode/skills"
-DST=""
+PKG="$(npm root -g)/opencode-team-memory"
 
 if [ "$GLOBAL" = "--global" ]; then
-  DST="$HOME/.config/opencode/skills"
+  SKILL_DST="$HOME/.config/opencode/skills"
+  AGENT_DST="$HOME/.config/opencode/agents"
 else
-  DST="$(pwd)/.opencode/skills"
+  SKILL_DST="$(pwd)/.opencode/skills"
+  AGENT_DST="$(pwd)/.opencode/agents"
 fi
 
-if [ ! -d "$SRC" ]; then
-  echo "Error: skills source not found at $SRC" >&2
-  echo "Run: npm install -g opencode-team-memory" >&2
+if [ ! -d "$PKG/.opencode/skills" ]; then
+  echo "Error: package not found. Run: npm install -g opencode-team-memory" >&2
   exit 1
 fi
 
-mkdir -p "$DST"
 copied=0
 
-for skill_dir in "$SRC"/*; do
+# ── Skills ──
+mkdir -p "$SKILL_DST"
+for skill_dir in "$PKG/.opencode/skills"/*; do
   [ -d "$skill_dir" ] || continue
   name=$(basename "$skill_dir")
-  if [ "$name" = "tm-engineer" ] || [ "$name" = "tm-tester" ] || [ "$name" = "tm-designer" ]; then
-    cp -r "$skill_dir" "$DST/"
-    echo "  ✓ $name"
-    copied=$((copied + 1))
-  fi
+  case "$name" in
+    tm-engineer|tm-tester|tm-designer)
+      cp -r "$skill_dir" "$SKILL_DST/"
+      echo "  ✓ skill: $name"
+      copied=$((copied + 1))
+      ;;
+  esac
 done
 
+# ── Director Agent ──
+if [ -f "$PKG/.opencode/agents/director.md" ]; then
+  mkdir -p "$AGENT_DST"
+  cp "$PKG/.opencode/agents/director.md" "$AGENT_DST/"
+  echo "  ✓ agent: director"
+  copied=$((copied + 1))
+fi
+
 echo ""
-echo "Installed $copied skills to $DST"
+echo "Installed $copied items to project"
 echo "Restart opencode if already running."

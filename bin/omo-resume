@@ -4,6 +4,13 @@
 
 set -eu
 
+# opencodeが利用可能か確認
+if ! command -v opencode >/dev/null 2>&1; then
+  echo "Error: opencode not found in PATH" >&2
+  echo "Install: brew install opencode  or  npm install -g opencode-ai" >&2
+  exit 1
+fi
+
 MEMORY_DIR="${OPENCODE_TEAM_MEMORY_DIR:-$(pwd)/.omo/team-memory}"
 MODE="${OPENCODE_TEAM_CONTINUE:-ask}"
 ROLES="engineer tester designer director"
