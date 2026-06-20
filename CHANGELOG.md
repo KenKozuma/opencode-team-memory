@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.1
+
+- Add `omo-skill-install` — copy role skills to project
+- `buildTaskPrompt` now includes skill load instruction
+- Fix: skills discoverable from user project
+- Add apply_patch editing rules to Director
+
 ## 1.4.0
 
 - Add `role_delegate` tool — auto-detect next role and generate task prompt

@@ -244,10 +244,11 @@ export function buildTaskPrompt(entry: MemoryEntry, targetRole: Role): string {
 
   lines.push(
     `## Instructions`,
-    `1. role_memory_load(role="${targetRole}") to restore your context`,
-    `2. Complete the task described above`,
-    `3. role_memory_save(role="${targetRole}", handoff_to="<next-role>", raw="summary")`,
-    `4. Report result back to Director`,
+    `1. Load skill: skill({ name: "tm-${targetRole}" }) — ALWAYS do this first`,
+    `2. role_memory_load(role="${targetRole}") to restore your context`,
+    `3. Complete the task described above`,
+    `4. role_memory_save(role="${targetRole}", handoff_to="<next-role>", raw="summary")`,
+    `5. Report result back to Director`,
   )
 
   return lines.join("\n")

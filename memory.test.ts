@@ -306,6 +306,7 @@ describe("buildTaskPrompt", () => {
     expect(out).toContain("payment module")
     expect(out).toContain("role_memory_load")
     expect(out).toContain("role_memory_save")
+    expect(out).toContain("tm-tester")
   })
 
   test("omits empty sections", () => {

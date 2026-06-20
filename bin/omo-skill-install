@@ -1,0 +1,38 @@
+#!/bin/sh
+# omo-skill-install — team-memory role skills をプロジェクトにコピー
+# Usage: omo-skill-install [--global]
+
+set -eu
+
+GLOBAL="${1:-}"
+SRC="$(npm root -g)/opencode-team-memory/.opencode/skills"
+DST=""
+
+if [ "$GLOBAL" = "--global" ]; then
+  DST="$HOME/.config/opencode/skills"
+else
+  DST="$(pwd)/.opencode/skills"
+fi
+
+if [ ! -d "$SRC" ]; then
+  echo "Error: skills source not found at $SRC" >&2
+  echo "Run: npm install -g opencode-team-memory" >&2
+  exit 1
+fi
+
+mkdir -p "$DST"
+copied=0
+
+for skill_dir in "$SRC"/*; do
+  [ -d "$skill_dir" ] || continue
+  name=$(basename "$skill_dir")
+  if [ "$name" = "tm-engineer" ] || [ "$name" = "tm-tester" ] || [ "$name" = "tm-designer" ]; then
+    cp -r "$skill_dir" "$DST/"
+    echo "  ✓ $name"
+    copied=$((copied + 1))
+  fi
+done
+
+echo ""
+echo "Installed $copied skills to $DST"
+echo "Restart opencode if already running."
