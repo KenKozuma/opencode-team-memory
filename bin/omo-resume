@@ -1,0 +1,147 @@
+#!/bin/sh
+# omo-resume — 前回のチーム状態を復元して opencode を起動
+# Usage: omo-resume [--always|--ask|--never]
+
+set -eu
+
+MEMORY_DIR="${OPENCODE_TEAM_MEMORY_DIR:-$(pwd)/.omo/team-memory}"
+MODE="${OPENCODE_TEAM_CONTINUE:-ask}"
+ROLES="engineer tester designer director"
+
+# CLI引数でモード上書き
+case "${1:-}" in
+  --always) MODE=always ;;
+  --ask)    MODE=ask ;;
+  --never)  MODE=never ;;
+  "")       ;;
+  *)        echo "Usage: omo-resume [--always|--ask|--never]" >&2; exit 1 ;;
+esac
+
+# never モード: 通常起動
+if [ "$MODE" = "never" ]; then
+  echo "Team continuation disabled. Starting opencode normally." >&2
+  exec opencode
+fi
+
+# メモリ読み取り
+latest_role=""
+latest_time=""
+found=0
+for role in $ROLES; do
+  file="$MEMORY_DIR/$role/context.json"
+  [ -f "$file" ] || continue
+  found=1
+  last_updated=$(python3 -c "
+import json,sys
+try:
+  d=json.load(open('$file'))
+  print(d.get('last_updated',''))
+except: pass
+" 2>/dev/null)
+  [ -n "$last_updated" ] || continue
+  if [ -z "$latest_time" ] || [ "$last_updated" \> "$latest_time" ]; then
+    latest_time="$last_updated"
+    latest_role="$role"
+  fi
+done
+
+# メモリがない場合: 通常起動
+if [ "$found" -eq 0 ] || [ -z "$latest_role" ]; then
+  echo "No previous team context found. Starting opencode normally." >&2
+  exec opencode
+fi
+
+# 復元プロンプト生成
+prompt=$(python3 -c "
+import json, sys
+
+file = '$MEMORY_DIR/$latest_role/context.json'
+with open(file) as f:
+    d = json.load(f)
+
+decisions = '; '.join(d.get('previous_decisions', [])[-3:]) or 'none'
+ng = d.get('ng_history', [])[-2:]
+handoff = d.get('handoff_to', '')
+confirmed = d.get('confirmed_scope', [])
+excluded = d.get('excluded_scope', [])
+
+lines = [
+    'Resume team work as $latest_role.',
+    '',
+    '## Team Continuation (omo-resume)',
+    '',
+    '### Your Role: $latest_role',
+]
+
+if handoff:
+    lines.append('### Handoff \u2192 ' + handoff)
+
+lines.extend([
+    '### Status: ng_count=' + str(len(d.get('ng_history', []))),
+    '',
+    '### Critical Context',
+    decisions,
+])
+
+if ng:
+    lines.append('')
+    lines.append('### Recent NG Items')
+    for item in ng:
+        lines.append('- ' + item)
+
+if confirmed:
+    lines.append('')
+    lines.append('### Confirmed Scope')
+    for s in confirmed:
+        lines.append('- ' + s)
+
+if excluded:
+    lines.append('')
+    lines.append('### Excluded (DO NOT TOUCH)')
+    for s in excluded:
+        lines.append('- ' + s)
+
+lines.extend([
+    '',
+    '### Instructions',
+    '1. role_memory_load(role=\"$latest_role\") to restore full context',
+])
+
+if handoff:
+    lines.append(\"2. Handoff target is '\" + handoff + \"'. Prepare accordingly.\")
+    if len(d.get('ng_history', [])) > 0:
+        lines.append('3. Address NG items before handoff.')
+elif len(d.get('ng_history', [])) > 0:
+    lines.append('2. Address NG items first.')
+
+lines.append('')
+print('\n'.join(lines))
+" 2>/dev/null)
+
+if [ -z "$prompt" ]; then
+  echo "Failed to generate continuation prompt. Starting opencode normally." >&2
+  exec opencode
+fi
+
+# 復元プロンプトを表示
+echo "" >&2
+echo "========================================" >&2
+echo " Team Continuation" >&2
+echo "========================================" >&2
+echo " Role:     $latest_role" >&2
+echo " Updated:  $latest_time" >&2
+echo " Mode:     $MODE" >&2
+echo "========================================" >&2
+echo "" >&2
+
+# ask モード: 確認
+if [ "$MODE" = "ask" ]; then
+  printf "Resume with this context? [Y/n] " >&2
+  read -r answer
+  case "$answer" in
+    [Nn]*) echo "Starting fresh session." >&2; exec opencode ;;
+  esac
+fi
+
+# always / ask(確認済み): opencode を起動
+exec opencode run "$prompt"

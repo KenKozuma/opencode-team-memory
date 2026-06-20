@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0
+
+- Add `omo-resume` CLI — auto-restore team context on opencode launch
+- Three modes: `--always`, `--ask` (default), `--never`
+- Reads latest role state from `.omo/team-memory/`
+- Generates continuation prompt and passes to `opencode run`
+
 ## 1.1.0
 
 - Add `formatContinuation()` — generates role-aware continuation prompt
