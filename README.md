@@ -3,6 +3,8 @@
 Persistent role-based memory for OpenCode + Oh-My-OpenCode(OmO) Team Mode.  
 Context survives across sessions, Team Mode runs, and compaction.
 
+**v1.1.0**: Auto-role restoration on session start — Agent recognizes its role without manual reload.
+
 ## Problem
 
 OmO Team Mode members are ephemeral — they die when the run ends (default: 120 min).  
@@ -23,6 +25,39 @@ Stored per-role at `<project>/.omo/team-memory/{role}/context.json`.
 Override with `OPENCODE_TEAM_MEMORY_DIR` env var.
 
 Compaction hook injects compact summaries automatically — long sessions keep context.
+
+## Auto-Role Restoration (v1.1.0)
+
+When opencode starts, the plugin checks saved role memory and injects a continuation prompt into the system prompt. The Agent automatically:
+
+1. Recognizes its role (engineer / tester / designer / director)
+2. Reads handoff state (who passed work and where it goes next)
+3. Sees recent NG items and critical decisions
+4. Knows confirmed and excluded scope
+
+**No manual `role_memory_load` required.** The session starts with full context.
+
+Output looks like:
+
+```
+## Team Continuation (opencode-team-memory)
+
+### Your Role: engineer
+### Handoff → tester
+### Status: ng_count=2
+### Critical Context
+use postgres; adopt JWT; add rate limit
+### Recent NG Items
+login redirect broken
+token expiry too short
+### Confirmed Scope
+- auth module
+
+### Instructions
+1. role_memory_load(role="engineer") before starting
+2. Handoff target is 'tester' — prepare output accordingly
+3. Address NG items first
+```
 
 ## Enable / Disable
 
