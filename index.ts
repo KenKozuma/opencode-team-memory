@@ -79,22 +79,27 @@ export const TeamMemoryPlugin: Plugin = async ({ directory }) => {
         },
         async execute(args) {
           // Lv1: saveの前に既存のng_historyを取得（差分検出用）
-          let existingNG: Set<string> | null = null
-          if (args.ng_history?.length) {
+          // 重複排除: 同一save内で同じNGが複数渡された場合の二重参照を防止
+          let existingNG: Set<string> = new Set()
+          const ngItems = Array.isArray(args.ng_history) ? args.ng_history : undefined
+          if (ngItems?.length) {
             try {
               const existing = await load(args.role as Role)
               existingNG = new Set(existing?.ng_history || [])
             } catch {
-              // best-effort: proceed even if load fails
+              // 破損時は全件を新規扱い（best-effort）
             }
           }
 
+          // NOTE: save() 内で再度 load() が走るため、save側でexistingを返すよう
+          //       リファクタすればI/Oを1回削減できる（将来改善）
           const m = await save(args as SaveInput)
 
-          // Lv1: 新しい ng_history だけを自動参照
-          if (existingNG && args.ng_history?.length) {
+          // Lv1: 新しい ng_history だけを自動参照（重複排除＋差分検出）
+          if (ngItems?.length) {
             try {
-              const newItems = (args.ng_history as string[]).filter(ng => !existingNG.has(ng))
+              const unique = [...new Set(ngItems)]
+              const newItems = unique.filter(ng => !existingNG.has(ng))
               if (newItems.length > 0) {
                 const refs = await loadReferences(args.role as Role)
                 let updated = refs
