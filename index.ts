@@ -78,18 +78,32 @@ export const TeamMemoryPlugin: Plugin = async ({ directory }) => {
           raw: tool.schema.string().optional(),
         },
         async execute(args) {
-          const m = await save(args as SaveInput)
-
-          // Lv1: ng_history があれば自動で role_memory_reference
+          // Lv1: saveの前に既存のng_historyを取得（差分検出用）
+          let existingNG: Set<string> | null = null
           if (args.ng_history?.length) {
             try {
-              const refs = await loadReferences(args.role as Role)
-              let updated = refs
-              for (const ng of (args.ng_history as string[])) {
-                const result = trackReference(updated, `NG: ${ng}`, `Auto-detected from test failure: ${ng}`)
-                updated = result.refs
+              const existing = await load(args.role as Role)
+              existingNG = new Set(existing?.ng_history || [])
+            } catch {
+              // best-effort: proceed even if load fails
+            }
+          }
+
+          const m = await save(args as SaveInput)
+
+          // Lv1: 新しい ng_history だけを自動参照
+          if (existingNG && args.ng_history?.length) {
+            try {
+              const newItems = (args.ng_history as string[]).filter(ng => !existingNG.has(ng))
+              if (newItems.length > 0) {
+                const refs = await loadReferences(args.role as Role)
+                let updated = refs
+                for (const ng of newItems) {
+                  const result = trackReference(updated, `NG: ${ng}`, `Auto-detected from test failure: ${ng}`)
+                  updated = result.refs
+                }
+                await saveReferences(args.role as Role, updated)
               }
-              await saveReferences(args.role as Role, updated)
             } catch {
               // best-effort: dont break save on reference failure
             }

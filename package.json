@@ -1,6 +1,6 @@
 {
   "name": "opencode-team-memory",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "Persistent role-based memory for OpenCode/OmO Team Mode — survives across sessions and runs",
   "type": "module",
   "main": "index.ts",
