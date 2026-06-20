@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.1
+
+- Add `omo-verify` — automated component health check
+
 ## 1.5.0
 
 - Add `omo-init` — one-command project setup (skills + opencode.json + AGENTS.md + .gitignore)

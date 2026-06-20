@@ -1,0 +1,54 @@
+#!/bin/sh
+# omo-verify — 全コンポーネントの動作確認（TUI不要項目）
+set -eu
+
+check() { printf "  %-40s " "$1"; shift; if "$@" >/dev/null 2>&1; then printf "\033[0;32mOK\033[0m\n"; else printf "\033[0;31mFAIL\033[0m\n"; fi; }
+warn()  { printf "  %-40s \033[1;33m%s\033[0m\n" "$1" "$2"; }
+
+echo ""
+echo "========================================"
+echo " omo-verify"
+echo "========================================"
+echo ""
+
+# ── RTK ──
+check "rtk binary"         command -v rtk
+check "rtk --version"      rtk --version
+# ── Context-Mode ──
+check "context-mode npm"   npm ls -g context-mode
+check "context-mode CLI"   command -v context-mode
+# ── team-memory ──
+check "team-memory npm"    npm ls -g opencode-team-memory
+check "omo-resume"         command -v omo-resume
+check "omo-init"           command -v omo-init
+check "omo-skill-install"   command -v omo-skill-install
+
+# ── グローバル設定 ──
+CONF="$HOME/.config/opencode/opencode.json"
+check "$CONF exists"       test -f "$CONF"
+check "plugin registered"  grep -q "opencode-team-memory" "$CONF"
+
+# ── スキル + Agent ──
+check "tm-engineer skill"  test -f "$HOME/.config/opencode/skills/tm-engineer/SKILL.md"
+check "tm-tester skill"    test -f "$HOME/.config/opencode/skills/tm-tester/SKILL.md"
+check "tm-designer skill"  test -f "$HOME/.config/opencode/skills/tm-designer/SKILL.md"
+check "director agent"     test -f "$HOME/.config/opencode/agents/director.md"
+
+# ── プロジェクト設定 ──
+PROJ="${1:-$(pwd)}"
+warn "opencode.json"       "$([ -f "$PROJ/opencode.json" ] && echo "exists" || echo "not found")"
+warn "AGENTS.md"           "$([ -f "$PROJ/AGENTS.md" ] && echo "exists" || echo "not found (run: omo-init)")"
+
+# ── メモリ ──
+warn "shared memory"       "$(grep -q OPENCODE_TEAM_MEMORY_DIR ~/.zshrc 2>/dev/null && echo "GLOBAL (shared)" || echo "per-project")"
+
+echo ""
+echo "========================================"
+echo " TUI内で手動確認が必要:"
+echo ""
+echo "  1. apply_patchの有無    → Agent「apply_patchは使えるか？」"
+echo "  2. Director Agent       → Tabキーで一覧表示"
+echo "  3. @tm-engineer 補完    → 入力中にautocomplete"
+echo "  4. ctx stats 応答       → Context-Mode稼働確認"
+echo "  5. Team Continuation    → 起動時に復元プロンプト有無"
+echo "========================================"
