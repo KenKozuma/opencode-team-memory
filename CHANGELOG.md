@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.0
+
+- Add `omo-init` — one-command project setup (skills + opencode.json + AGENTS.md + .gitignore)
+
 ## 1.4.4
 
 - `omo-skill-install` now also copies Director agent

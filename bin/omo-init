@@ -1,0 +1,55 @@
+#!/bin/sh
+# omo-init — プロジェクトに team-memory 環境をセットアップ
+# Usage: omo-init
+
+set -eu
+
+PKG="$(npm root -g)/opencode-team-memory"
+CTX="$(npm root -g)/context-mode"
+
+echo "omo-init: setting up team-memory environment..."
+echo ""
+
+# 1. skills + Director agent
+if [ -d "$PKG/.opencode/skills" ]; then
+  omo-skill-install
+else
+  echo "  ⚠ team-memory not found. Run: npm install -g opencode-team-memory" >&2
+fi
+echo ""
+
+# 2. opencode.json (新規作成時のみ)
+if [ ! -f "opencode.json" ]; then
+  cat > opencode.json << 'EOF'
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["opencode-team-memory", "context-mode"]
+}
+EOF
+  echo "  ✓ created opencode.json"
+else
+  echo "  ⚠ opencode.json already exists (skipped)"
+fi
+echo ""
+
+# 3. Context-Mode routing rules
+if [ -f "$CTX/configs/opencode/AGENTS.md" ] && [ ! -f "AGENTS.md" ]; then
+  cp "$CTX/configs/opencode/AGENTS.md" AGENTS.md
+  echo "  ✓ copied AGENTS.md (Context-Mode routing)"
+elif [ -f "AGENTS.md" ]; then
+  echo "  ⚠ AGENTS.md already exists (skipped)"
+else
+  echo "  ⚠ Context-Mode not found. Run: npm install -g context-mode" >&2
+fi
+echo ""
+
+# 4. .gitignore に追加（存在する場合）
+if [ -f ".gitignore" ] && ! grep -q ".omo/" .gitignore 2>/dev/null; then
+  echo "" >> .gitignore
+  echo "# opencode-team-memory" >> .gitignore
+  echo ".omo/team-memory/" >> .gitignore
+  echo "  ✓ added .omo/team-memory/ to .gitignore"
+fi
+
+echo ""
+echo "Done. Start: opencode ."
