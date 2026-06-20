@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.0
+
+- Add `role_memory_reference` tool — track pattern reuse count
+- Add `role_memory_hot_patterns` tool — list patterns at threshold
+- Add `omo-skill-generate` CLI — auto-generate SKILL.md from hot patterns
+- Add `trackReference()` / `findHotPatterns()` / `generateSkillMarkdown()` to memory.ts
+- Patterns reaching 3+ references become OpenCode skills automatically
+- 6 new tests (27 total)
+
 ## 1.2.1
 
 - Add `role_memory_resume` tool — restore team context mid-session without restart

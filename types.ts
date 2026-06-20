@@ -53,3 +53,15 @@ export interface ContinueState {
   decisions_summary: string
   ng_summary: string
 }
+
+export interface ReferenceEntry {
+  count: number
+  solution: string
+  last_referenced: string
+}
+
+export interface References {
+  [pattern_name: string]: ReferenceEntry
+}
+
+export const SKILL_THRESHOLD = 3

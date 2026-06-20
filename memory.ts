@@ -1,4 +1,4 @@
-import { type MemoryEntry, type SaveInput, CURRENT_VERSION, EMPTY_MEMORY, type Role } from "./types"
+import { type MemoryEntry, type SaveInput, CURRENT_VERSION, EMPTY_MEMORY, type Role, type References, type ReferenceEntry, SKILL_THRESHOLD } from "./types"
 
 const MAX_KEEP = 50
 const RAW_LOAD_LIMIT = 5
@@ -143,4 +143,61 @@ export function formatContinuation(entry: MemoryEntry | null, role: Role): strin
   )
 
   return lines.filter(Boolean).join("\n")
+}
+
+export function trackReference(
+  refs: References,
+  pattern_name: string,
+  solution: string,
+): { refs: References; reached: boolean; count: number } {
+  const existing = refs[pattern_name] || { count: 0, solution }
+  const entry: ReferenceEntry = {
+    count: existing.count + 1,
+    solution: solution || existing.solution,
+    last_referenced: new Date().toISOString(),
+  }
+  return {
+    refs: { ...refs, [pattern_name]: entry },
+    reached: entry.count >= SKILL_THRESHOLD,
+    count: entry.count,
+  }
+}
+
+export function findHotPatterns(refs: References): Array<{ name: string; entry: ReferenceEntry }> {
+  return Object.entries(refs)
+    .filter(([, entry]) => entry.count >= SKILL_THRESHOLD)
+    .map(([name, entry]) => ({ name, entry }))
+    .sort((a, b) => b.entry.count - a.entry.count)
+}
+
+export function generateSkillMarkdown(name: string, entry: ReferenceEntry, role: Role): string {
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+
+  return [
+    "---",
+    `name: ${slug}`,
+    `description: Auto-generated from ${entry.count} successful uses. ${name} — ${entry.solution.slice(0, 80)}`,
+    "license: MIT",
+    "compatibility: opencode",
+    "metadata:",
+    "  source: opencode-team-memory",
+    `  role: ${role}`,
+    `  references: ${entry.count}`,
+    `  generated: ${new Date().toISOString()}`,
+    "---",
+    "",
+    `# ${name}`,
+    "",
+    `Auto-generated skill from ${entry.count} successful pattern references.`,
+    "",
+    "## Solution",
+    entry.solution,
+    "",
+    "## When to Use",
+    `This pattern has been referenced ${entry.count} times by the ${role} role.`,
+    "Apply when encountering this class of problem.",
+    "",
+    "## Usage",
+    `Agent: @${slug} を呼び出せば、この解決策が適用される。`,
+  ].join("\n")
 }

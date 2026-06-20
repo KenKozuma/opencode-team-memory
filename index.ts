@@ -1,8 +1,8 @@
 import { type Plugin, tool } from "@opencode-ai/plugin"
 import { readFile, writeFile, mkdir, access } from "node:fs/promises"
 import { join } from "node:path"
-import { ALL_ROLES, EMPTY_MEMORY, type MemoryEntry, type Role, type SaveInput } from "./types"
-import { merge, format, formatCompact, formatSaveResult, formatContinuation } from "./memory"
+import { ALL_ROLES, EMPTY_MEMORY, type MemoryEntry, type Role, type SaveInput, type References } from "./types"
+import { merge, format, formatCompact, formatSaveResult, formatContinuation, trackReference, findHotPatterns, generateSkillMarkdown } from "./memory"
 
 function getMemoryBase(directory: string): string {
   return process.env.OPENCODE_TEAM_MEMORY_DIR || join(directory, ".omo", "team-memory")
@@ -45,6 +45,22 @@ export const TeamMemoryPlugin: Plugin = async ({ directory }) => {
     const merged = merge(existing, input, directory)
     await writeFile(join(dir, "context.json"), JSON.stringify(merged, null, 2))
     return merged
+  }
+
+  async function loadReferences(role: Role): Promise<References> {
+    try {
+      const text = await readFile(join(base, role, "references.json"), "utf-8")
+      return JSON.parse(text) as References
+    } catch (err: unknown) {
+      if (isENOENT(err)) return {}
+      throw err
+    }
+  }
+
+  async function saveReferences(role: Role, refs: References): Promise<void> {
+    const dir = join(base, role)
+    await mkdir(dir, { recursive: true })
+    await writeFile(join(dir, "references.json"), JSON.stringify(refs, null, 2))
   }
 
   return {
@@ -112,6 +128,55 @@ export const TeamMemoryPlugin: Plugin = async ({ directory }) => {
           }
 
           return formatContinuation(latestEntry, latestRole)
+        },
+      }),
+
+      role_memory_reference: tool({
+        description: "Track a pattern reference. Each call increments usage count. At threshold (3), pattern becomes a skill candidate. Call when reusing a past solution.",
+        args: {
+          role: tool.schema.enum(ALL_ROLES),
+          pattern_name: tool.schema.string(),
+          solution: tool.schema.string(),
+        },
+        async execute(args) {
+          const refs = await loadReferences(args.role as Role)
+          const result = trackReference(refs, args.pattern_name, args.solution)
+          await saveReferences(args.role as Role, result.refs)
+
+          if (result.reached) {
+            const md = generateSkillMarkdown(args.pattern_name, { count: result.count, solution: args.solution, last_referenced: new Date().toISOString() }, args.role as Role)
+            return [
+              `🔥 Pattern "${args.pattern_name}" reached threshold (${result.count}/3)!`,
+              ``,
+              `Run to generate skill: omo-skill-generate --role=${args.role} --pattern="${args.pattern_name}"`,
+              ``,
+              `Preview:`,
+              md,
+            ].join("\n")
+          }
+
+          return `Referenced "${args.pattern_name}" (${result.count}/3 → threshold at 3)`
+        },
+      }),
+
+      role_memory_hot_patterns: tool({
+        description: "List patterns that have reached skill generation threshold",
+        args: {
+          role: tool.schema.enum(ALL_ROLES),
+        },
+        async execute(args) {
+          const refs = await loadReferences(args.role as Role)
+          const hot = findHotPatterns(refs)
+          if (hot.length === 0) {
+            return `No patterns reached threshold for role '${args.role}'. Keep referencing solutions with role_memory_reference.`
+          }
+
+          return [
+            `Hot patterns for '${args.role}' (≥3 references):`,
+            ...hot.map(h => `  - ${h.name}: ${h.entry.count}x → ${h.entry.solution.slice(0, 60)}`),
+            ``,
+            `Generate skills: omo-skill-generate --role=${args.role}`,
+          ].join("\n")
         },
       }),
     },

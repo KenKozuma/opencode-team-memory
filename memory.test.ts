@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test"
-import { merge, format, formatCompact, formatSaveResult, formatContinuation } from "./memory"
+import { merge, format, formatCompact, formatSaveResult, formatContinuation, trackReference, findHotPatterns, generateSkillMarkdown } from "./memory"
 import { EMPTY_MEMORY, type MemoryEntry } from "./types"
 
 const PROJECT = "/fake/project"
@@ -231,5 +231,59 @@ describe("formatContinuation", () => {
     const entry = makeEntry({ role: "tester", handoff_to: "director" })
     const out = formatContinuation(entry, "tester")
     expect(out).toContain("Handoff target")
+  })
+})
+
+describe("trackReference", () => {
+  test("increments count and sets solution", () => {
+    const { refs, reached, count } = trackReference({}, "JWT clock skew", "use NTP sync")
+    expect(count).toBe(1)
+    expect(reached).toBe(false)
+    expect(refs["JWT clock skew"].count).toBe(1)
+    expect(refs["JWT clock skew"].solution).toBe("use NTP sync")
+  })
+
+  test("accumulates count on repeated references", () => {
+    let state = trackReference({}, "JWT clock skew", "use NTP sync")
+    state = trackReference(state.refs, "JWT clock skew", "")
+    expect(state.count).toBe(2)
+    expect(state.refs["JWT clock skew"].count).toBe(2)
+  })
+
+  test("reaches threshold at 3", () => {
+    let state = trackReference({}, "rate limit", "add backoff")
+    state = trackReference(state.refs, "rate limit", "")
+    state = trackReference(state.refs, "rate limit", "")
+    expect(state.count).toBe(3)
+    expect(state.reached).toBe(true)
+  })
+})
+
+describe("findHotPatterns", () => {
+  test("returns patterns at or above threshold", () => {
+    const refs = {
+      "JWT clock skew": { count: 5, solution: "use NTP", last_referenced: "" },
+      "rate limit": { count: 2, solution: "add backoff", last_referenced: "" },
+      "auth redirect": { count: 3, solution: "check middleware", last_referenced: "" },
+    }
+    const hot = findHotPatterns(refs)
+    expect(hot).toHaveLength(2)
+    expect(hot[0].name).toBe("JWT clock skew")
+    expect(hot[1].name).toBe("auth redirect")
+  })
+
+  test("returns empty when no threshold met", () => {
+    expect(findHotPatterns({ "x": { count: 1, solution: "fix", last_referenced: "" } })).toHaveLength(0)
+  })
+})
+
+describe("generateSkillMarkdown", () => {
+  test("generates valid SKILL.md", () => {
+    const entry = { count: 5, solution: "use NTP sync to fix clock skew", last_referenced: "2026-06-20" }
+    const md = generateSkillMarkdown("JWT clock skew", entry, "engineer")
+    expect(md).toContain("name: jwt-clock-skew")
+    expect(md).toContain("use NTP sync")
+    expect(md).toContain("references: 5")
+    expect(md).toContain("role: engineer")
   })
 })

@@ -1,0 +1,104 @@
+#!/bin/sh
+# omo-skill-generate — 閾値超過パターンを SKILL.md に変換
+# Usage: omo-skill-generate --role=<engineer|tester|designer|director> [--pattern=<name>] [--all]
+
+set -eu
+
+MEMORY_DIR="${OPENCODE_TEAM_MEMORY_DIR:-$(pwd)/.omo/team-memory}"
+SKILLS_DIR="$(pwd)/.opencode/skills"
+ROLE=""
+PATTERN=""
+ALL=false
+
+for arg in "$@"; do
+  case "$arg" in
+    --role=*) ROLE="${arg#--role=}" ;;
+    --pattern=*) PATTERN="${arg#--pattern=}" ;;
+    --all) ALL=true ;;
+    --help|-h) echo "Usage: omo-skill-generate --role=<role> [--pattern=<name>] [--all]" >&2; exit 0 ;;
+    *) echo "Unknown: $arg" >&2; exit 1 ;;
+  esac
+done
+
+if [ -z "$ROLE" ]; then
+  echo "Error: --role is required" >&2
+  exit 1
+fi
+
+REFS_FILE="$MEMORY_DIR/$ROLE/references.json"
+if [ ! -f "$REFS_FILE" ]; then
+  echo "Error: No references found for role '$ROLE'. Use role_memory_reference first." >&2
+  exit 1
+fi
+
+mkdir -p "$SKILLS_DIR"
+
+generate_one() {
+  _name="$1"
+  _count="$2"
+  _solution="$3"
+
+  slug=$(echo "$_name" | tr 'A-Z ' 'a-z-' | sed 's/[^a-z0-9-]//g; s/--*/-/g; s/^-//; s/-$//')
+  dir="$SKILLS_DIR/$slug"
+  mkdir -p "$dir"
+
+  cat > "$dir/SKILL.md" << SKILLEOF
+---
+name: $slug
+description: Auto-generated skill (${_count} references). $_name — $(echo "$_solution" | head -c 80)
+license: MIT
+compatibility: opencode
+metadata:
+  source: opencode-team-memory
+  role: $ROLE
+  references: $_count
+  generated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+---
+
+# $_name
+
+Auto-generated from $_count successful pattern references by $ROLE.
+
+## Solution
+
+$_solution
+
+## When to Use
+
+This pattern has been validated $_count times by $ROLE.
+Apply when encountering this class of problem.
+
+## Usage
+
+Agent should load this skill via \`skill({ name: "$slug" })\` when the problem matches.
+SKILLEOF
+
+  echo "  ✓ $slug ($_name : $_count refs)"
+}
+
+echo "" >&2
+echo "Skill Generation: $ROLE" >&2
+echo "========================================" >&2
+
+generated=0
+python3 -c "
+import json, sys
+refs = json.load(open('$REFS_FILE'))
+for name, entry in sorted(refs.items(), key=lambda x: -x[1]['count']):
+    if entry['count'] >= 3:
+        print(f'{name}\t{entry[\"count\"]}\t{entry[\"solution\"]}')
+" 2>/dev/null | while IFS='	' read -r name count solution; do
+  if [ -n "$PATTERN" ] && [ "$name" != "$PATTERN" ]; then
+    continue
+  fi
+  generate_one "$name" "$count" "$solution"
+  generated=$((generated + 1))
+done
+
+if [ "$generated" -eq 0 ]; then
+  echo "  (no patterns reached threshold of 3)" >&2
+fi
+
+echo "========================================" >&2
+echo "Skills directory: $SKILLS_DIR" >&2
+echo "Restart opencode to load new skills." >&2
