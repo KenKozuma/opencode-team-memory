@@ -2,7 +2,7 @@ import { type Plugin, tool } from "@opencode-ai/plugin"
 import { readFile, writeFile, mkdir, access } from "node:fs/promises"
 import { join } from "node:path"
 import { ALL_ROLES, EMPTY_MEMORY, type MemoryEntry, type Role, type SaveInput } from "./types"
-import { merge, format, formatCompact, formatSaveResult } from "./memory"
+import { merge, format, formatCompact, formatSaveResult, formatContinuation } from "./memory"
 
 function getMemoryBase(directory: string): string {
   return process.env.OPENCODE_TEAM_MEMORY_DIR || join(directory, ".omo", "team-memory")
@@ -95,12 +95,42 @@ export const TeamMemoryPlugin: Plugin = async ({ directory }) => {
       for (const role of ALL_ROLES) {
         try {
           const entry = await load(role)
-          if (entry) {
-            output.context.push(formatCompact(entry))
-          }
+          if (!entry) continue
+
+          // Human-readable compact summary
+          output.context.push(formatCompact(entry))
+
+          // Context-Mode compatible: structured metadata for FTS5 indexing
+          output.context.push(
+            JSON.stringify({
+              source: "opencode-team-memory",
+              role: entry.role,
+              handoff_to: entry.handoff_to,
+              ng_count: entry.ng_history.length,
+              decisions: entry.previous_decisions.slice(-3),
+              last_updated: entry.last_updated,
+            })
+          )
         } catch {
           // skip roles with no saved memory
         }
+      }
+    },
+
+    "experimental.chat.system.transform": async (_input, output) => {
+      const blocks: string[] = []
+      for (const role of ALL_ROLES) {
+        try {
+          const entry = await load(role)
+          if (!entry) continue
+          const block = formatContinuation(entry, role)
+          if (block) blocks.push(block)
+        } catch {
+          // skip corrupted files
+        }
+      }
+      if (blocks.length > 0) {
+        output.context.push(blocks.join("\n\n"))
       }
     },
   }

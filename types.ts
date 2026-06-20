@@ -42,3 +42,14 @@ export interface SaveInput {
   handoff_to?: string
   raw?: string
 }
+
+export interface ContinueState {
+  role: Role
+  handoff_to: string
+  last_action: string
+  ng_count: number
+  confirmed_scope: string[]
+  excluded_scope: string[]
+  decisions_summary: string
+  ng_summary: string
+}

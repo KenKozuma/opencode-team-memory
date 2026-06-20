@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test"
-import { merge, format, formatCompact, formatSaveResult } from "./memory"
+import { merge, format, formatCompact, formatSaveResult, formatContinuation } from "./memory"
 import { EMPTY_MEMORY, type MemoryEntry } from "./types"
 
 const PROJECT = "/fake/project"
@@ -186,5 +186,50 @@ describe("formatSaveResult", () => {
     const out = formatSaveResult(entry)
     expect(out).toContain("engineer")
     expect(out).not.toContain("→")
+  })
+})
+
+describe("formatContinuation", () => {
+  test("generates continuation prompt with handoff and NG history", () => {
+    const entry = makeEntry({
+      role: "engineer",
+      handoff_to: "tester",
+      ng_history: ["login redirect broken", "token expiry too short"],
+      previous_decisions: ["use postgres", "adopt JWT", "add rate limit"],
+      confirmed_scope: ["auth module"],
+      excluded_scope: ["payment module"],
+    })
+    const out = formatContinuation(entry, "engineer")
+    expect(out).toContain("engineer")
+    expect(out).toContain("→ tester")
+    expect(out).toContain("login redirect broken")
+    expect(out).toContain("rate limit")
+    expect(out).toContain("auth module")
+    expect(out).toContain("payment module")
+    expect(out).toContain("role_memory_load")
+  })
+
+  test("returns empty for null entry", () => {
+    expect(formatContinuation(null, "engineer")).toBe("")
+  })
+
+  test("no handoff section when empty", () => {
+    const entry = makeEntry({ role: "tester", handoff_to: "" })
+    const out = formatContinuation(entry, "tester")
+    expect(out).toContain("tester")
+    expect(out).not.toContain("Handoff →")
+  })
+
+  test("no NG section when no NG history", () => {
+    const entry = makeEntry({ role: "designer", ng_history: [] })
+    const out = formatContinuation(entry, "designer")
+    expect(out).toContain("designer")
+    expect(out).not.toContain("NG Items")
+  })
+
+  test("includes handoff instruction when target set", () => {
+    const entry = makeEntry({ role: "tester", handoff_to: "director" })
+    const out = formatContinuation(entry, "tester")
+    expect(out).toContain("Handoff target")
   })
 })

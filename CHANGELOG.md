@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.0
+
+- Add `formatContinuation()` — generates role-aware continuation prompt
+- Add `experimental.chat.system.transform` hook — injects role context at session start
+- Add Context-Mode compatible JSON metadata to compaction snapshots
+- Sessions now auto-restore role context on restart
+
+## 1.0.2
+
+- Fix `scripts/preflight.sh` inclusion in npm tarball
+
 ## 1.0.1
 
 - Add `scripts/preflight.sh` — automated installation check

@@ -97,3 +97,50 @@ export function formatSaveResult(entry: MemoryEntry): string {
     entry.handoff_to ? `  Next: → ${entry.handoff_to}` : "",
   ].join("\n")
 }
+
+export function formatContinuation(entry: MemoryEntry | null, role: Role): string {
+  if (!entry) return ""
+
+  const decisions = entry.previous_decisions.slice(-3).join("; ")
+  const ng = entry.ng_history.slice(-2)
+
+  const lines: string[] = [
+    "## Team Continuation (opencode-team-memory)",
+    "",
+    `### Your Role: ${role}`,
+  ]
+
+  if (entry.handoff_to) {
+    lines.push(`### Handoff → ${entry.handoff_to}`)
+  }
+
+  lines.push(`### Status: ng_count=${entry.ng_history.length}`)
+
+  if (decisions) {
+    lines.push(`### Critical Context\n${decisions}`)
+  }
+
+  if (ng.length > 0) {
+    lines.push(`### Recent NG Items\n${ng.join("\n")}`)
+  }
+
+  if (entry.confirmed_scope.length > 0) {
+    lines.push(`### Confirmed Scope\n${entry.confirmed_scope.map(s => `- ${s}`).join("\n")}`)
+  }
+
+  if (entry.excluded_scope.length > 0) {
+    lines.push(`### Excluded (DO NOT TOUCH)\n${entry.excluded_scope.map(s => `- ${s}`).join("\n")}`)
+  }
+
+  lines.push(
+    "",
+    "### Instructions",
+    `1. role_memory_load(role="${role}") before starting`,
+    entry.handoff_to ? `2. Handoff target is '${entry.handoff_to}' — prepare output accordingly` : "",
+    entry.ng_history.length > 0 ? `${entry.handoff_to ? "3" : "2"}. Address NG items first` : "",
+    "0. Resume work based on context above",
+    ""
+  )
+
+  return lines.filter(Boolean).join("\n")
+}
