@@ -1,4 +1,4 @@
-import { type MemoryEntry, type SaveInput, CURRENT_VERSION, EMPTY_MEMORY, type Role, type References, type ReferenceEntry, SKILL_THRESHOLD } from "./types"
+import { type MemoryEntry, type SaveInput, CURRENT_VERSION, EMPTY_MEMORY, type Role, type References, type ReferenceEntry, SKILL_THRESHOLD, ALL_ROLES } from "./types"
 
 const MAX_KEEP = 50
 const RAW_LOAD_LIMIT = 5
@@ -33,7 +33,9 @@ export function merge(existing: MemoryEntry | null, input: SaveInput, project: s
     confirmed_scope: input.confirmed_scope || base.confirmed_scope,
     excluded_scope: input.excluded_scope || base.excluded_scope,
     active_files: input.active_files || base.active_files,
-    handoff_to: input.handoff_to !== undefined ? input.handoff_to : base.handoff_to,
+    handoff_to: input.handoff_to !== undefined
+      ? (input.handoff_to && !ALL_ROLES.includes(input.handoff_to as Role) ? base.handoff_to : input.handoff_to)
+      : base.handoff_to,
     raw_entries: input.raw
       ? append(base.raw_entries, [input.raw])
       : base.raw_entries,
@@ -138,7 +140,7 @@ export function formatContinuation(entry: MemoryEntry | null, role: Role): strin
     `1. role_memory_load(role="${role}") before starting`,
     entry.handoff_to ? `2. Handoff target is '${entry.handoff_to}' — prepare output accordingly` : "",
     entry.ng_history.length > 0 ? `${entry.handoff_to ? "3" : "2"}. Address NG items first` : "",
-    "0. Resume work based on context above",
+    "→ Resume work based on context above",
     ""
   )
 

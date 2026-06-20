@@ -1,6 +1,6 @@
 #!/bin/sh
 # omo-skill-prune — 使われなくなったスキルを削除
-# Usage: omo-skill-prune --role=<role> [--days=30]
+# Usage: omo-skill-prune --role=<role> [--days=30] [--dry-run]
 
 set -eu
 
@@ -15,31 +15,46 @@ for arg in "$@"; do
     --days=*) DAYS="${arg#--days=}" ;;
     --dry-run) DRY_RUN=true ;;
     --help|-h) echo "Usage: omo-skill-prune --role=<role> [--days=30] [--dry-run]" >&2; exit 0 ;;
+    *) echo "Unknown: $arg" >&2; exit 1 ;;
   esac
 done
+
+# input validation
+case "$DAYS" in
+  ''|*[!0-9]*) echo "Error: --days must be a positive integer" >&2; exit 1 ;;
+  *) ;;
+esac
 
 if [ -z "$ROLE" ]; then
   echo "Error: --role is required" >&2; exit 1
 fi
 
-cutoff=$(python3 -c "from datetime import datetime, timedelta; print((datetime.utcnow() - timedelta(days=$DAYS)).isoformat() + 'Z')")
-REFS_FILE="$MEMORY_DIR/$ROLE/references.json"
+export _PRUNE_DAYS="$DAYS"
+export _PRUNE_REFS="$MEMORY_DIR/$ROLE/references.json"
 
-if [ ! -f "$REFS_FILE" ]; then
+if [ ! -f "$_PRUNE_REFS" ]; then
   echo "No references found for role '$ROLE'" >&2; exit 0
 fi
+
+cutoff=$(python3 -c "
+import os, sys
+from datetime import datetime, timedelta
+days = int(os.environ['_PRUNE_DAYS'])
+print((datetime.utcnow() - timedelta(days=days)).isoformat() + 'Z')
+" 2>/dev/null)
 
 echo "" >&2
 echo "Skill Prune: $ROLE (>${DAYS}d unused)" >&2
 echo "========================================" >&2
 
+export _PRUNE_CUTOFF="$cutoff"
 python3 -c "
-import json, sys
-refs = json.load(open('$REFS_FILE'))
+import json, os, sys
+cutoff = os.environ['_PRUNE_CUTOFF']
+refs = json.load(open(os.environ['_PRUNE_REFS']))
 for k, v in refs.items():
-    if k.startswith('SKILL: ') and v.get('last_referenced', '') < '$cutoff':
-        skill = k.replace('SKILL: ', '')
-        print(f'{skill}')
+    if k.startswith('SKILL: ') and v.get('last_referenced', '') < cutoff:
+        print(k.replace('SKILL: ', ''))
 " 2>/dev/null | while read -r skill; do
   slug=$(echo "$skill" | tr 'A-Z ' 'a-z-' | sed 's/[^a-z0-9-]//g; s/--*/-/g; s/^-//; s/-$//')
   dir="$SKILLS_DIR/$slug"

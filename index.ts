@@ -78,6 +78,11 @@ export const TeamMemoryPlugin: Plugin = async ({ directory }) => {
           raw: tool.schema.string().optional(),
         },
         async execute(args) {
+          // handoff_to バリデーション
+          if (args.handoff_to && !ALL_ROLES.includes(args.handoff_to as Role)) {
+            return `Invalid handoff_to '${args.handoff_to}'. Must be one of: ${ALL_ROLES.join(", ")}. Not saved.`
+          }
+
           // Lv1: saveの前に既存のng_historyを取得（差分検出用）
           // 重複排除: 同一save内で同じNGが複数渡された場合の二重参照を防止
           let existingNG: Set<string> = new Set()
@@ -151,7 +156,7 @@ export const TeamMemoryPlugin: Plugin = async ({ directory }) => {
 
           for (const role of ALL_ROLES) {
             const entry = await load(role)
-            if (entry && entry.last_updated > latestTime) {
+            if (entry && entry.last_updated >= latestTime) {
               latestTime = entry.last_updated
               latestRole = role
               latestEntry = entry
@@ -231,6 +236,9 @@ export const TeamMemoryPlugin: Plugin = async ({ directory }) => {
           }
 
           const targetRole = entry.handoff_to as Role
+          if (!ALL_ROLES.includes(targetRole)) {
+            return `Invalid handoff target '${entry.handoff_to}'. Must be one of: ${ALL_ROLES.join(", ")}.`
+          }
           const prompt = buildTaskPrompt(entry, targetRole)
 
           return [
@@ -257,7 +265,7 @@ export const TeamMemoryPlugin: Plugin = async ({ directory }) => {
         async execute(args) {
           const refs = await loadReferences(args.role as Role)
           const key = `SKILL: ${args.skill_name}`
-          const result = trackReference(refs, key, "")
+          const result = trackReference(refs, key, `Skill loaded: ${args.skill_name}`)
           await saveReferences(args.role as Role, result.refs)
           return `Tracked "${args.skill_name}" usage (${result.count}x total) for role '${args.role}'`
         },

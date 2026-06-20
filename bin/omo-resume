@@ -38,10 +38,11 @@ for role in $ROLES; do
   file="$MEMORY_DIR/$role/context.json"
   [ -f "$file" ] || continue
   found=1
+export _RSM_FILE="$MEMORY_DIR/$role/context.json"
   last_updated=$(python3 -c "
-import json,sys
+import json, os
 try:
-  d=json.load(open('$file'))
+  d=json.load(open(os.environ['_RSM_FILE']))
   print(d.get('last_updated',''))
 except: pass
 " 2>/dev/null)
@@ -59,10 +60,13 @@ if [ "$found" -eq 0 ] || [ -z "$latest_role" ]; then
 fi
 
 # 復元プロンプト生成
+export _RSM_ROLE="$latest_role"
+export _RSM_FILE="$MEMORY_DIR/$latest_role/context.json"
 prompt=$(python3 -c "
-import json, sys
+import json, os
 
-file = '$MEMORY_DIR/$latest_role/context.json'
+file = os.environ['_RSM_FILE']
+role = os.environ['_RSM_ROLE']
 with open(file) as f:
     d = json.load(f)
 
@@ -73,45 +77,45 @@ confirmed = d.get('confirmed_scope', [])
 excluded = d.get('excluded_scope', [])
 
 lines = [
-    'Resume team work as $latest_role.',
+    'Resume team work as ' + role + '.',
     '',
     '## Team Continuation (omo-resume)',
     '',
-    '### Your Role: $latest_role',
-]
+    '### Your Role: ' + role,
+  ]
 
-if handoff:
-    lines.append('### Handoff \u2192 ' + handoff)
+  if handoff:
+      lines.append('### Handoff \u2192 ' + handoff)
 
-lines.extend([
-    '### Status: ng_count=' + str(len(d.get('ng_history', []))),
-    '',
-    '### Critical Context',
-    decisions,
-])
+  lines.extend([
+      '### Status: ng_count=' + str(len(d.get('ng_history', []))),
+      '',
+      '### Critical Context',
+      decisions,
+  ])
 
-if ng:
-    lines.append('')
-    lines.append('### Recent NG Items')
-    for item in ng:
-        lines.append('- ' + item)
+  if ng:
+      lines.append('')
+      lines.append('### Recent NG Items')
+      for item in ng:
+          lines.append('- ' + item)
 
-if confirmed:
-    lines.append('')
-    lines.append('### Confirmed Scope')
-    for s in confirmed:
-        lines.append('- ' + s)
+  if confirmed:
+      lines.append('')
+      lines.append('### Confirmed Scope')
+      for s in confirmed:
+          lines.append('- ' + s)
 
-if excluded:
-    lines.append('')
-    lines.append('### Excluded (DO NOT TOUCH)')
-    for s in excluded:
-        lines.append('- ' + s)
+  if excluded:
+      lines.append('')
+      lines.append('### Excluded (DO NOT TOUCH)')
+      for s in excluded:
+          lines.append('- ' + s)
 
-lines.extend([
-    '',
-    '### Instructions',
-    '1. role_memory_load(role=\"$latest_role\") to restore full context',
+  lines.extend([
+      '',
+      '### Instructions',
+      '1. role_memory_load(role="' + role + '") to restore full context',
 ])
 
 if handoff:
