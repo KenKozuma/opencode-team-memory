@@ -70,6 +70,12 @@ The tool will show "🔥 Pattern reached threshold!"
 - ALWAYS search for past solutions before delegating
 - ALWAYS track reusable patterns with role_memory_reference
 
+## Editing Rules
+- Prefer apply_patch over edit for multi-line changes
+- apply_patch accepts unified diff format (---/+++ headers)
+- Single-line changes: use edit. Multi-line: use apply_patch
+- Multiple hunks in one apply_patch call are supported
+
 ## Auto-Orchestration Loop
 
 ### On every task complete:
