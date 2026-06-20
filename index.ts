@@ -89,6 +89,31 @@ export const TeamMemoryPlugin: Plugin = async ({ directory }) => {
           return `✓ Cleared all memory for '${args.role}'`
         },
       }),
+
+      role_memory_resume: tool({
+        description: "Detect current role from saved memory and generate continuation prompt. Use when resuming team work mid-session.",
+        args: {},
+        async execute() {
+          let latestRole: Role | null = null
+          let latestTime = ""
+          let latestEntry: MemoryEntry | null = null
+
+          for (const role of ALL_ROLES) {
+            const entry = await load(role)
+            if (entry && entry.last_updated > latestTime) {
+              latestTime = entry.last_updated
+              latestRole = role
+              latestEntry = entry
+            }
+          }
+
+          if (!latestEntry || !latestRole) {
+            return "No team context found. Use role_memory_save first, or start a new task."
+          }
+
+          return formatContinuation(latestEntry, latestRole)
+        },
+      }),
     },
 
     "experimental.session.compacting": async (_input, output) => {

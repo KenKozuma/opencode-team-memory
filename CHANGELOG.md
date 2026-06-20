@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1
+
+- Add `role_memory_resume` tool — restore team context mid-session without restart
+- Add `/resume` TUI command
+
 ## 1.2.0
 
 - Add `omo-resume` CLI — auto-restore team context on opencode launch
