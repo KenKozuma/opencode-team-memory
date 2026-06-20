@@ -57,6 +57,13 @@ Or register as custom commands in `opencode.json`:
 
 Then type `/memory-off` or `/memory-on` in the TUI.
 
+**Check installation:**
+```
+/preflight
+```
+
+Runs automated checks for RTK, Context-Mode, and team-memory status.
+
 ## Install
 
 ```bash
