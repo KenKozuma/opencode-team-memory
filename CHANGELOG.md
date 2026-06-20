@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1
+
+- Add `scripts/preflight.sh` — automated installation check
+- Add `/preflight` custom command for TUI
+
 ## 1.0.0
 
 - Initial release
