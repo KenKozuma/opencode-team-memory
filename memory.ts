@@ -201,3 +201,54 @@ export function generateSkillMarkdown(name: string, entry: ReferenceEntry, role:
     `Agent: @${slug} を呼び出せば、この解決策が適用される。`,
   ].join("\n")
 }
+
+export function buildTaskPrompt(entry: MemoryEntry, targetRole: Role): string {
+  const ng = entry.ng_history.slice(-2)
+  const decisions = entry.previous_decisions.slice(-3)
+  const raw = entry.raw_entries.slice(-1)[0] || ""
+
+  const lines: string[] = [
+    `You are acting as ${targetRole}.`,
+    "",
+  ]
+
+  if (raw) {
+    lines.push(`## Context from previous role (${entry.role})`)
+    lines.push(raw)
+    lines.push("")
+  }
+
+  if (decisions.length > 0) {
+    lines.push("## Key Decisions")
+    decisions.forEach(d => lines.push(`- ${d}`))
+    lines.push("")
+  }
+
+  if (ng.length > 0) {
+    lines.push("## NG Items to Address")
+    ng.forEach(n => lines.push(`- ${n}`))
+    lines.push("")
+  }
+
+  if (entry.confirmed_scope.length > 0) {
+    lines.push("## Confirmed Scope")
+    entry.confirmed_scope.forEach(s => lines.push(`- ${s}`))
+    lines.push("")
+  }
+
+  if (entry.excluded_scope.length > 0) {
+    lines.push("## Excluded (DO NOT TOUCH)")
+    entry.excluded_scope.forEach(s => lines.push(`- ${s}`))
+    lines.push("")
+  }
+
+  lines.push(
+    `## Instructions`,
+    `1. role_memory_load(role="${targetRole}") to restore your context`,
+    `2. Complete the task described above`,
+    `3. role_memory_save(role="${targetRole}", handoff_to="<next-role>", raw="summary")`,
+    `4. Report result back to Director`,
+  )
+
+  return lines.join("\n")
+}

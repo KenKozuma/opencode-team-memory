@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test"
-import { merge, format, formatCompact, formatSaveResult, formatContinuation, trackReference, findHotPatterns, generateSkillMarkdown } from "./memory"
+import { merge, format, formatCompact, formatSaveResult, formatContinuation, trackReference, findHotPatterns, generateSkillMarkdown, buildTaskPrompt } from "./memory"
 import { EMPTY_MEMORY, type MemoryEntry } from "./types"
 
 const PROJECT = "/fake/project"
@@ -285,5 +285,34 @@ describe("generateSkillMarkdown", () => {
     expect(md).toContain("use NTP sync")
     expect(md).toContain("references: 5")
     expect(md).toContain("role: engineer")
+  })
+})
+
+describe("buildTaskPrompt", () => {
+  test("generates task prompt with full context", () => {
+    const entry = makeEntry({
+      role: "engineer",
+      ng_history: ["login redirect broken"],
+      previous_decisions: ["use postgres"],
+      confirmed_scope: ["auth module"],
+      excluded_scope: ["payment module"],
+      raw_entries: ["implemented JWT login endpoint"],
+    })
+    const out = buildTaskPrompt(entry, "tester")
+    expect(out).toContain("acting as tester")
+    expect(out).toContain("implemented JWT login endpoint")
+    expect(out).toContain("login redirect broken")
+    expect(out).toContain("auth module")
+    expect(out).toContain("payment module")
+    expect(out).toContain("role_memory_load")
+    expect(out).toContain("role_memory_save")
+  })
+
+  test("omits empty sections", () => {
+    const entry = makeEntry({ role: "designer" })
+    const out = buildTaskPrompt(entry, "engineer")
+    expect(out).not.toContain("NG Items")
+    expect(out).not.toContain("Confirmed Scope")
+    expect(out).not.toContain("Excluded")
   })
 })

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.0
+
+- Add `role_delegate` tool — auto-detect next role and generate task prompt
+- Add `buildTaskPrompt()` — construct role-aware task prompts from saved context
+- Add role skills: tm-engineer, tm-tester, tm-designer
+- Director auto-orchestration loop operational
+- 2 new tests (29 total)
+
 ## 1.3.1
 
 - Add Director Agent config with self-improvement protocol

@@ -2,7 +2,7 @@ import { type Plugin, tool } from "@opencode-ai/plugin"
 import { readFile, writeFile, mkdir, access } from "node:fs/promises"
 import { join } from "node:path"
 import { ALL_ROLES, EMPTY_MEMORY, type MemoryEntry, type Role, type SaveInput, type References } from "./types"
-import { merge, format, formatCompact, formatSaveResult, formatContinuation, trackReference, findHotPatterns, generateSkillMarkdown } from "./memory"
+import { merge, format, formatCompact, formatSaveResult, formatContinuation, trackReference, findHotPatterns, generateSkillMarkdown, buildTaskPrompt } from "./memory"
 
 function getMemoryBase(directory: string): string {
   return process.env.OPENCODE_TEAM_MEMORY_DIR || join(directory, ".omo", "team-memory")
@@ -176,6 +176,39 @@ export const TeamMemoryPlugin: Plugin = async ({ directory }) => {
             ...hot.map(h => `  - ${h.name}: ${h.entry.count}x → ${h.entry.solution.slice(0, 60)}`),
             ``,
             `Generate skills: omo-skill-generate --role=${args.role}`,
+          ].join("\n")
+        },
+      }),
+
+      role_delegate: tool({
+        description: "Read saved role state and generate a task prompt for the next role in the handoff chain. Director calls this to auto-orchestrate the team.",
+        args: {
+          from_role: tool.schema.enum(ALL_ROLES),
+        },
+        async execute(args) {
+          const entry = await load(args.from_role as Role)
+          if (!entry) {
+            return `No saved context for role '${args.from_role}'. Save context first with role_memory_save.`
+          }
+
+          if (!entry.handoff_to) {
+            return "No handoff target set. All roles may be complete. Check and report to user."
+          }
+
+          const targetRole = entry.handoff_to as Role
+          const prompt = buildTaskPrompt(entry, targetRole)
+
+          return [
+            `## Delegation: ${entry.role} → ${targetRole}`,
+            ``,
+            `Call task() with subagent_type="general" and the following prompt:`,
+            ``,
+            "```",
+            prompt,
+            "```",
+            ``,
+            `After completion: role_memory_save(role="${targetRole}", handoff_to="<next>")`,
+            `Then call role_delegate(from_role="${targetRole}") to continue the loop.`,
           ].join("\n")
         },
       }),

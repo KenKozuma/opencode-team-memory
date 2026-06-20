@@ -69,4 +69,23 @@ The tool will show "🔥 Pattern reached threshold!"
 - NEVER test yourself — delegate to tester
 - ALWAYS search for past solutions before delegating
 - ALWAYS track reusable patterns with role_memory_reference
-- Report to user only when: all roles complete, or blocked
+
+## Auto-Orchestration Loop
+
+### On every task complete:
+1. Identify current role's handoff target via `role_memory_resume()`
+2. `role_delegate(from_role=<current>)` → generates next task prompt
+3. `task(subagent_type="general", prompt=<returned>)` → execute next role
+4. After subagent completes: repeat from step 1
+
+### Stop conditions:
+- `role_delegate` returns "No handoff target" → work complete → report
+- 10 cycles without resolution → report blocked
+- User interrupts
+
+### NEVER:
+- Ask "what should I delegate next?"
+- Stop mid-loop without reporting status
+- Skip the role_delegate → task() → repeat cycle
+
+## Report to user only when ALL tasks complete or blocked.
