@@ -261,3 +261,56 @@ describe("formatContinuation", () => {
 - Context-Mode 導入済み
 - opencode-team-memory v1.0.0 導入済み
 - opencode 再起動後に3点セットの動作確認が取れていること
+
+## 事前動作確認手順
+
+### 1. opencode 再起動
+
+```bash
+opencode
+```
+
+### 2. Context-Mode 動作確認
+
+TUI内で:
+
+```
+ctx stats
+```
+
+**期待出力**: トークン節約量、ツール別内訳が表示される。  
+表示されなければ Context-Mode 未導入または AGENTS.md 未反映。
+
+### 3. RTK 動作確認
+
+別ターミナルで:
+
+```bash
+rtk gain
+```
+
+**期待出力**: `No tracking data yet`（初回は未使用なのでこれで正常。インストールは完了している）
+
+実際の動作確認は opencode 内で `git status` を実行し、出力が短くなっていることで判断する。  
+出力が通常通り長い場合は `rtk init -g --opencode` を再実行。
+
+### 4. team-memory ツール確認
+
+TUI内で Agent に以下を入力:
+
+```
+role_memory_saveとrole_memory_loadというツールは使えるか？
+```
+
+Agent がツールを認識して呼び出せるかで判断する。  
+認識されない場合は `.opencode/plugins/` のシンボリックリンクと `opencode.json` の `plugin` 配列を確認。
+
+### 判定基準
+
+| # | 確認項目 | OK条件 |
+|---|---|---|
+| 2 | Context-Mode | `ctx stats` が応答する |
+| 3 | RTK | `rtk gain` が実行できる（tracking data ゼロでもOK） |
+| 4 | team-memory | Agent が `role_memory_*` ツールを認識する |
+
+3点すべて OK → v1.1 実装着手。
