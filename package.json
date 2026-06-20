@@ -1,6 +1,6 @@
 {
   "name": "opencode-team-memory",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "Persistent role-based memory for OpenCode/OmO Team Mode — survives across sessions and runs",
   "type": "module",
   "main": "index.ts",
@@ -9,7 +9,8 @@
     "omo-skill-generate": "bin/omo-skill-generate",
     "omo-skill-install": "bin/omo-skill-install",
     "omo-init": "bin/omo-init",
-    "omo-verify": "bin/omo-verify"
+    "omo-verify": "bin/omo-verify",
+    "omo-skill-prune": "bin/omo-skill-prune"
   },
   "files": [
     "index.ts",

@@ -79,6 +79,22 @@ export const TeamMemoryPlugin: Plugin = async ({ directory }) => {
         },
         async execute(args) {
           const m = await save(args as SaveInput)
+
+          // Lv1: ng_history があれば自動で role_memory_reference
+          if (args.ng_history?.length) {
+            try {
+              const refs = await loadReferences(args.role as Role)
+              let updated = refs
+              for (const ng of (args.ng_history as string[])) {
+                const result = trackReference(updated, `NG: ${ng}`, `Auto-detected from test failure: ${ng}`)
+                updated = result.refs
+              }
+              await saveReferences(args.role as Role, updated)
+            } catch {
+              // best-effort: dont break save on reference failure
+            }
+          }
+
           return formatSaveResult(m)
         },
       }),
@@ -209,6 +225,48 @@ export const TeamMemoryPlugin: Plugin = async ({ directory }) => {
             ``,
             `After completion: role_memory_save(role="${targetRole}", handoff_to="<next>")`,
             `Then call role_delegate(from_role="${targetRole}") to continue the loop.`,
+          ].join("\n")
+        },
+      }),
+
+      role_memory_skill_used: tool({
+        description: "Track skill usage for analytics. Call when a generated skill is loaded. Helps identify unused skills for pruning.",
+        args: {
+          skill_name: tool.schema.string(),
+          role: tool.schema.enum(ALL_ROLES),
+        },
+        async execute(args) {
+          const refs = await loadReferences(args.role as Role)
+          const key = `SKILL: ${args.skill_name}`
+          const result = trackReference(refs, key, "")
+          await saveReferences(args.role as Role, result.refs)
+          return `Tracked "${args.skill_name}" usage (${result.count}x total) for role '${args.role}'`
+        },
+      }),
+
+      role_memory_unused_skills: tool({
+        description: "List skills that haven't been used recently. Helps with skill pruning.",
+        args: {
+          role: tool.schema.enum(ALL_ROLES),
+          days_threshold: tool.schema.number().optional(),
+        },
+        async execute(args) {
+          const threshold = args.days_threshold || 30
+          const cutoff = new Date(Date.now() - threshold * 86400000).toISOString()
+          const refs = await loadReferences(args.role as Role)
+          const unused = Object.entries(refs)
+            .filter(([k, v]) => k.startsWith("SKILL: ") && v.last_referenced < cutoff)
+            .map(([k]) => k.replace("SKILL: ", ""))
+            .sort()
+
+          if (unused.length === 0) {
+            return `No unused skills for role '${args.role}' (${threshold}d threshold).`
+          }
+          return [
+            `Unused skills for '${args.role}' (>${threshold}d):`,
+            ...unused.map(s => `  - ${s}`),
+            ``,
+            `Prune: omo-skill-prune --role=${args.role}`,
           ].join("\n")
         },
       }),

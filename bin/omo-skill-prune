@@ -1,0 +1,57 @@
+#!/bin/sh
+# omo-skill-prune — 使われなくなったスキルを削除
+# Usage: omo-skill-prune --role=<role> [--days=30]
+
+set -eu
+
+MEMORY_DIR="${OPENCODE_TEAM_MEMORY_DIR:-$(pwd)/.omo/team-memory}"
+SKILLS_DIR="$(pwd)/.opencode/skills"
+ROLE=""
+DAYS=30
+
+for arg in "$@"; do
+  case "$arg" in
+    --role=*) ROLE="${arg#--role=}" ;;
+    --days=*) DAYS="${arg#--days=}" ;;
+    --dry-run) DRY_RUN=true ;;
+    --help|-h) echo "Usage: omo-skill-prune --role=<role> [--days=30] [--dry-run]" >&2; exit 0 ;;
+  esac
+done
+
+if [ -z "$ROLE" ]; then
+  echo "Error: --role is required" >&2; exit 1
+fi
+
+cutoff=$(python3 -c "from datetime import datetime, timedelta; print((datetime.utcnow() - timedelta(days=$DAYS)).isoformat() + 'Z')")
+REFS_FILE="$MEMORY_DIR/$ROLE/references.json"
+
+if [ ! -f "$REFS_FILE" ]; then
+  echo "No references found for role '$ROLE'" >&2; exit 0
+fi
+
+echo "" >&2
+echo "Skill Prune: $ROLE (>${DAYS}d unused)" >&2
+echo "========================================" >&2
+
+python3 -c "
+import json, sys
+refs = json.load(open('$REFS_FILE'))
+for k, v in refs.items():
+    if k.startswith('SKILL: ') and v.get('last_referenced', '') < '$cutoff':
+        skill = k.replace('SKILL: ', '')
+        print(f'{skill}')
+" 2>/dev/null | while read -r skill; do
+  slug=$(echo "$skill" | tr 'A-Z ' 'a-z-' | sed 's/[^a-z0-9-]//g; s/--*/-/g; s/^-//; s/-$//')
+  dir="$SKILLS_DIR/$slug"
+  if [ -d "$dir" ]; then
+    if [ "${DRY_RUN:-false}" = "true" ]; then
+      echo "  [DRY-RUN] would remove: $slug ($skill)" >&2
+    else
+      rm -rf "$dir"
+      echo "  ✗ removed: $slug ($skill)" >&2
+    fi
+  fi
+done
+
+echo "========================================" >&2
+echo "Restart opencode if already running." >&2

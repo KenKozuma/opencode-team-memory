@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.0
+
+- **Lv1 Auto-extraction**: ng_history in role_memory_save auto-references patterns
+- **Lv2 Usage tracking**: role_memory_skill_used + role_memory_unused_skills tools
+- **Lv3 Cross-project**: OPENCODE_TEAM_MEMORY_DIR supports shared references
+- `omo-skill-prune` CLI — remove unused skills after N days
+- Director prompt updated with auto self-improvement instructions
+
 ## 1.5.1
 
 - Add `omo-verify` — automated component health check

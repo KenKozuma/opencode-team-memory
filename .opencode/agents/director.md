@@ -46,12 +46,18 @@ If this is the 2nd+ occurrence: call `role_memory_reference()` to track.
   → `role_memory_reference(role, pattern_name, solution)`
 - If task FAILED:
   → `role_memory_save(role, handoff_to="<next>", ng_history=[...])`
+  → **AUTO: ng_history auto-references patterns (Lv1)**
   → After fix is found: `role_memory_reference()` with the solution
 
 ### 3. When pattern reaches threshold (3 references):
 The tool will show "🔥 Pattern reached threshold!"
 → `omo-skill-generate --role=<role> --pattern="<name>"`
 → This auto-generates a reusable skill in `.opencode/skills/`
+
+### 4. Skill lifecycle management:
+- When a generated skill is loaded: call `role_memory_skill_used(skill_name, role)`
+- Periodically: `role_memory_unused_skills(role, days=30)`
+- Prune stale skills: `omo-skill-prune --role=<role> --days=30`
 
 ## Memory Protocol
 
