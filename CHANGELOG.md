@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.1
+
+- Add Director Agent config with self-improvement protocol
+- Director auto-searches ctx_search before task delegation
+- Director auto-tracks reusable patterns via role_memory_reference
+- Full 3-layer pseudo-memory pipeline operational
+
 ## 1.3.0
 
 - Add `role_memory_reference` tool — track pattern reuse count

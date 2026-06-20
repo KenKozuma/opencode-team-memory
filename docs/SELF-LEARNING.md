@@ -1,5 +1,16 @@
 # Pseudo Self-Learning: Best Effort 設計
 
+## 実装状態: ✅ 完了 (v1.3.1)
+
+| 機能 | 実装箇所 |
+|---|---|
+| 意味記憶 (判断・NG履歴) | role_memory_save/load (v1.0.0) |
+| エピソード記憶 (FTS5全文検索) | Context-Mode + compaction hook JSON metadata (v1.1.0) |
+| 手続き記憶 (自発的検索指示) | Director Agent prompt (v1.3.1) |
+| 参照カウント追跡 | role_memory_reference (v1.3.0) |
+| ホットパターン検出 | role_memory_hot_patterns (v1.3.0) |
+| スキル自動生成 | omo-skill-generate (v1.3.0) |
+
 ## ゴール
 
 Hermes の自己学習（経験→スキル自動生成）を Context-Mode + team-memory で擬似的に再現する。
